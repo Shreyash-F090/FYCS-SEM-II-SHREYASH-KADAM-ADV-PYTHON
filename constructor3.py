@@ -4,9 +4,10 @@ agent_name = "Skye"
 kills = 18
 assists = 4
 class Performance:
-    def calculate_score(self):
+    def calculate_score(F090):
         score = (kills * 2) + assists
         print(f"Agent: {agent_name}")
         print(f"Final Performance Score = {score}")
-p1 = Performance()
-p1.calculate_score()
+90 = Performance()
+90.calculate_score()
+
