@@ -1,63 +1,53 @@
 import sqlite3
-# Shreyash F090
-# Step 1: Connect to database
-# -----------------------------
-conn = sqlite3.connect("Shreyash.db")
-cursor = conn.cursor()
-print("Database connected successfully!")
 
-# Shreyash F090
-# Step 2: Create Table
-# -----------------------------
-cursor.execute("""
-CREATE TABLE  F090_2 (
-    Name TEXT,
-    Age INTEGER,
-    City TEXT,
-    Grade TEXT
-)
-""")
-print("Table created successfully!")
+class Database:
+    def __init__(self):
+        self.conn = sqlite3.connect("store.db")
+        self.cursor = self.conn.cursor()
+        self.setup_tables()
 
-# Shreyash F090
-# Step 3: Insert Values
-# -----------------------------
-cursor.execute("INSERT INTO F090_2 VALUES (?, ?, ?, ?)", ("Shreyash", 17, "Mumbai", "FYCS"))
-cursor.execute("INSERT INTO F090_2 VALUES (?, ?, ?, ?)", ("Om", 18, "Pune", "FYBA"))
-cursor.execute("INSERT INTO F090_2 VALUES (?, ?, ?, ?)", ("Krish", 17, "Vile Parle", "FYCS"))
-cursor.execute("INSERT INTO F090_2 VALUES (?, ?, ?, ?)", ("Palak", 17, "Andheri", "FYCS"))
-conn.commit()
-print("Values inserted successfully!")
+    def setup_tables(self):
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, price REAL, stock INTEGER)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT, role TEXT)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS sales_history (sale_id INTEGER PRIMARY KEY AUTOINCREMENT, p_name TEXT, qty INTEGER, total REAL)")
+        self.cursor.execute("INSERT OR IGNORE INTO users VALUES ('shreyash', 'F090', 'admin')")
+        self.conn.commit()
 
-# Shreyash F090
-# Step 5: UPDATE Record
-# -----------------------------
-cursor.execute("UPDATE F090_2 SET City = ? WHERE Name = ?", ("Thane", "Palak"))
-conn.commit()
-print("\nRecord updated successfully!")
+    def authenticate(self, user, pwd):
+        self.cursor.execute("SELECT role FROM users WHERE username=? AND password=?", (user, pwd))
+        return self.cursor.fetchone()
 
-# Shreyash F090
-# -----------------------------
-cursor.execute("SELECT * FROM F090_2")
-print("\nBefore Delete:")
-for row in cursor.fetchall():
-    print(row)
+    def get_products(self, search=""):
+        if search:
+            self.cursor.execute("SELECT * FROM products WHERE name LIKE ?", ('%' + search + '%',))
+        else:
+            self.cursor.execute("SELECT * FROM products")
+        return self.cursor.fetchall()
 
-# Shreyash F090
-# Step 5: DELETE Record
-# -----------------------------
-cursor.execute("DELETE FROM F090_2 WHERE Name = ?", ("Shreyash",))
-conn.commit()
-print("\nRecord deleted successfully!")
+    def update_stock(self, p_id, qty):
+        self.cursor.execute("UPDATE products SET stock = stock + ? WHERE id = ?", (qty, p_id))
+        self.conn.commit()
 
-# Shreyash F090
-# Step 
-# -----------------------------
-cursor.execute("SELECT * FROM F090_2")
-print("\nAfter Delete:")
-for row in cursor.fetchall():
-    print(row)
+    def add_product(self, name, price, stock):
+        self.cursor.execute("INSERT INTO products (name, price, stock) VALUES (?, ?, ?)", (name, price, stock))
+        self.conn.commit()
 
+    def process_sale(self, p_id, qty):
+        self.cursor.execute("SELECT name, price, stock FROM products WHERE id=?", (p_id,))
+        item = self.cursor.fetchone()
+        if item and item[2] >= qty:
+            total = item[1] * qty
+            self.cursor.execute("UPDATE products SET stock = stock - ? WHERE id = ?", (qty, p_id))
+            self.cursor.execute("INSERT INTO sales_history (p_name, qty, total) VALUES (?, ?, ?)", (item[0], qty, total))
+            self.conn.commit()
+            return True
+        return False
 
-conn.close()
-print("\nConnection closed.")
+    def delete_product(self, p_id):
+        self.cursor.execute("DELETE FROM products WHERE id=?", (p_id,))
+        self.conn.commit()
+
+    def get_revenue(self):
+        self.cursor.execute("SELECT SUM(total) FROM sales_history")
+        res = self.cursor.fetchone()
+        return res[0] if res[0] else 0.0
